@@ -191,10 +191,9 @@
                 <tbody>
                     @forelse ($loans as $loan)
                     @php
-                        // Hitung lama peminjaman berdasarkan TANGGAL KEMBALI YANG SEBENARNYA (returned_at)
+                        // Hitung lama peminjaman
                         $borrowDate = \Carbon\Carbon::parse($loan->borrow_date);
                         
-                        // Gunakan returned_at (tanggal kembali sebenarnya) jika ada
                         if($loan->returned_at) {
                             $actualReturnDate = \Carbon\Carbon::parse($loan->returned_at);
                             $daysRaw = $borrowDate->diffInDays($actualReturnDate);
@@ -209,14 +208,89 @@
                         
                         $days = (int) $days;
                         
+                        // 0 hari dianggap 1 hari
+                        if($days < 1) {
+                            $days = 1;
+                        }
+                        
                         $harga_per_hari = intval($loan->item->harga_sewa_perhari ?? 0);
                         $total_sewa = $harga_per_hari * $days;
                         
-                        $totalFine = $loan->fines->sum('amount');
+                        // Hitung total denda dari fines
+                        $totalFineFromFines = $loan->fines->sum('amount');
                         $pendingFines = $loan->fines->where('status', 'pending');
                         $hasPending = $pendingFines->count() > 0;
                         $hasPaid = $loan->fines->where('status', 'paid')->count() > 0;
                         $hasWaived = $loan->fines->where('status', 'waived')->count() > 0;
+                        
+                        // 🔥 DENDA KONDISI BARANG
+                        // Kerusakan: dikalikan lama sewa (Rp 50.000 x hari)
+                        // Hilang: TETAP (tidak dikalikan) Rp 100.000.000
+                        $conditionFineAmount = 0;
+                        $conditionFineType = null;
+                        $hasConditionFineInFines = false;
+                        
+                        // Cek apakah sudah ada denda untuk kondisi ini di tabel fines
+                        foreach($loan->fines as $fine) {
+                            if($fine->fine_type == 'damage') {
+                                $hasConditionFineInFines = true;
+                            }
+                            if($fine->fine_type == 'lost') {
+                                $hasConditionFineInFines = true;
+                            }
+                        }
+                        
+                        if(($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak') && !$hasConditionFineInFines) {
+                            $conditionFineAmount = 50000 * $days; // Rp 50.000 x hari (DIKALIKAN)
+                            $conditionFineType = 'damage';
+                        } elseif(($loan->return_condition == 'lost') && !$hasConditionFineInFines) {
+                            $conditionFineAmount = 100000000; // Rp 100.000.000 (TETAP, TIDAK DIKALIKAN)
+                            $conditionFineType = 'lost';
+                        }
+                        
+                        // TOTAL DENDA AKHIR
+                        $totalFine = $totalFineFromFines + $conditionFineAmount;
+                        
+                        // Format display
+                        $displayFineAmount = 'Rp ' . number_format($totalFine, 0, ',', '.');
+                        $fineDetail = '';
+                        
+                        // Rincian dari fines
+                        foreach($loan->fines as $fine) {
+                            if($fine->fine_type == 'late') {
+                                $fineDetail .= '📅 Keterlambatan: Rp ' . number_format($fine->amount, 0, ',', '.') . '<br>';
+                            } elseif($fine->fine_type == 'damage') {
+                                $fineDetail .= '🔧 Kerusakan: Rp ' . number_format($fine->amount, 0, ',', '.') . '<br>';
+                            } elseif($fine->fine_type == 'lost') {
+                                $fineDetail .= '❌ Kehilangan: Rp ' . number_format($fine->amount, 0, ',', '.') . '<br>';
+                            }
+                        }
+                        
+                        // Rincian denda kondisi (jika ada dan belum di fines)
+                        if($conditionFineAmount > 0) {
+                            if($conditionFineType == 'damage') {
+                                $fineDetail .= '🔧 Denda Kerusakan (' . $days . ' hari x Rp 50.000): Rp ' . number_format($conditionFineAmount, 0, ',', '.') . '<br>';
+                            } elseif($conditionFineType == 'lost') {
+                                $fineDetail .= '❌ Denda Kehilangan: Rp ' . number_format($conditionFineAmount, 0, ',', '.') . '<br>';
+                            }
+                        }
+                        
+                        // Kondisi badge dan teks
+                        $conditionBadge = '';
+                        $conditionText = '';
+                        if($loan->return_condition == 'good' || $loan->return_condition == 'baik') {
+                            $conditionBadge = 'badge-good';
+                            $conditionText = '✓ Baik - Tidak ada kerusakan (Denda Rp 0)';
+                        } elseif($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak') {
+                            $conditionBadge = 'badge-damaged';
+                            $conditionText = '⚠ Rusak - Mengalami kerusakan (Denda Rp 50.000/hari x ' . $days . ' hari = Rp ' . number_format(50000 * $days, 0, ',', '.') . ')';
+                        } elseif($loan->return_condition == 'lost') {
+                            $conditionBadge = 'badge-lost';
+                            $conditionText = '✗ Hilang - Barang tidak ditemukan (Denda Rp 100.000.000)';
+                        } else {
+                            $conditionBadge = '';
+                            $conditionText = '-';
+                        }
                     @endphp
                     <tr class="border-b border-[rgba(185,166,255,0.1)] hover:bg-[rgba(185,166,255,0.05)] transition-colors">
                         <td class="p-3">{{ $loop->iteration }}</td>
@@ -235,53 +309,33 @@
                             {{ $displayReturnDate }}
                         </td>
                         <td class="p-3">
-                            <span class="text-white font-semibold">{{ $days }}</span> hari
-                            <div class="text-xs text-gray-400">
+                            <div class="text-white font-semibold">{{ $days }} hari</div>
+                            <div class="text-xs text-green-400">
                                 Total: Rp {{ number_format($total_sewa, 0, ',', '.') }}
                             </div>
                         </td>
                         <td class="p-3">
-                            @if($loan->return_condition == 'good' || $loan->return_condition == 'baik')
-                                <span class="badge-good">✓ Baik</span>
-                            @elseif($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak')
-                                <span class="badge-damaged" title="{{ $loan->damage_description }}">⚠ Rusak</span>
-                            @elseif($loan->return_condition == 'lost')
-                                <span class="badge-lost">✗ Hilang</span>
-                            @else
-                                <span class="text-gray-400">-</span>
-                            @endif
+                            <span class="{{ $conditionBadge }}" title="{{ $conditionText }}">
+                                {{ $conditionText }}
+                            </span>
                         </td>
-                        <!-- KOLOM TOTAL DENDA DENGAN NOMINAL -->
                         <td class="p-3">
                             @if($totalFine > 0)
                                 <div>
-                                    <span class="total-fine">Rp {{ number_format($totalFine, 0, ',', '.') }}</span>
-                                    @foreach($loan->fines as $fine)
-                                        <div class="text-xs mt-1">
-                                            @if($fine->fine_type == 'late')
-                                                📅 Keterlambatan: Rp {{ number_format($fine->amount, 0, ',', '.') }}
-                                            @elseif($fine->fine_type == 'damage')
-                                                🔧 Kerusakan: Rp {{ number_format($fine->amount, 0, ',', '.') }}
-                                            @elseif($fine->fine_type == 'lost')
-                                                ❌ Kehilangan: Rp {{ number_format($fine->amount, 0, ',', '.') }}
-                                            @endif
-                                            @if($fine->status == 'paid')
-                                                <span class="text-green-400">(Lunas)</span>
-                                            @elseif($fine->status == 'pending')
-                                                <span class="text-yellow-400">(Belum Bayar)</span>
-                                            @endif
-                                        </div>
-                                    @endforeach
+                                    <span class="total-fine">{{ $displayFineAmount }}</span>
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        {!! $fineDetail !!}
+                                    </div>
                                 </div>
                             @else
                                 <div>
                                     <span class="text-green-400">✓ Tidak ada denda</span>
-                                    <div class="text-xs text-gray-400">Rp 0</div>
+                                    <div class="text-xs text-gray-400">{{ $displayFineAmount }}</div>
                                 </div>
                             @endif
                         </td>
                         <td class="p-3 hidden md:table-cell">
-                            @if($hasPending)
+                            @if($hasPending || $conditionFineAmount > 0)
                                 <span class="status-pending">⏳ Menunggu Pembayaran</span>
                             @elseif($hasPaid)
                                 <span class="status-paid">✓ Lunas</span>

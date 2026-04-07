@@ -60,6 +60,12 @@
                 }
                 
                 $days = (int) $days;
+                
+                // 0 hari dianggap 1 hari
+                if($days < 1) {
+                    $days = 1;
+                }
+                
                 $harga_per_hari = intval($loan->item->harga_sewa_perhari ?? 0);
                 $total_sewa = $harga_per_hari * $days;
                 
@@ -72,8 +78,45 @@
                     }
                 }
                 
-                $totalDenda = $loan->fines->sum('amount');
+                // Hitung total denda dari fines
+                $totalFineFromFines = $loan->fines->sum('amount');
+                
+                // 🔥 DENDA KONDISI BARANG
+                // Kerusakan: dikalikan lama sewa (Rp 50.000 x hari)
+                // Hilang: TETAP (tidak dikalikan) Rp 100.000.000
+                $conditionFineAmount = 0;
+                $hasConditionFineInFines = false;
+                
+                // Cek apakah sudah ada denda untuk kondisi ini di tabel fines
+                foreach($loan->fines as $fine) {
+                    if($fine->fine_type == 'damage') {
+                        $hasConditionFineInFines = true;
+                    }
+                    if($fine->fine_type == 'lost') {
+                        $hasConditionFineInFines = true;
+                    }
+                }
+                
+                if(($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak') && !$hasConditionFineInFines) {
+                    $conditionFineAmount = 50000 * $days; // Rp 50.000 x hari (DIKALIKAN)
+                } elseif(($loan->return_condition == 'lost') && !$hasConditionFineInFines) {
+                    $conditionFineAmount = 100000000; // Rp 100.000.000 (TETAP, TIDAK DIKALIKAN)
+                }
+                
+                // TOTAL DENDA AKHIR
+                $totalDenda = $totalFineFromFines + $conditionFineAmount;
                 $totalBayar = $total_sewa + $totalDenda;
+                
+                // Tentukan status denda secara keseluruhan
+                $hasUnpaidFines = false;
+                foreach($loan->fines as $fine) {
+                    if($fine->status == 'pending') {
+                        $hasUnpaidFines = true;
+                    }
+                }
+                if($conditionFineAmount > 0) {
+                    $hasUnpaidFines = true;
+                }
             @endphp
             
             <div class="info-row">
@@ -153,7 +196,7 @@
             </div>
             @endif
             
-            <!-- DETAIL DENDA DENGAN NOMINAL -->
+            <!-- DETAIL DENDA -->
             @if($totalDenda > 0)
             <div class="divider"></div>
             <div class="fine-row">
@@ -191,6 +234,24 @@
                 </span>
             </div>
             @endforeach
+            
+            <!-- TAMPILKAN DENDA KONDISI BARANG JIKA BELUM ADA DI FINES -->
+            @if($conditionFineAmount > 0)
+            <div class="info-row">
+                <span class="info-label">
+                    @if($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak')
+                        🔧 Denda Kerusakan ({{ $days }} hari x Rp 50.000)
+                    @elseif($loan->return_condition == 'lost')
+                        ❌ Denda Kehilangan
+                    @endif
+                </span>
+                <span class="text-red">Rp {{ number_format($conditionFineAmount, 0, ',', '.') }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="status-badge status-unpaid">⏳ BELUM DIBAYAR</span>
+            </div>
+            @endif
             @endif
             
             <div class="divider"></div>
