@@ -4,33 +4,6 @@
 
 @section('content')
 <style>
-    .badge-good {
-        background: rgba(34, 197, 94, 0.2);
-        color: #4ade80;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        display: inline-block;
-    }
-    
-    .badge-damaged {
-        background: rgba(245, 158, 11, 0.2);
-        color: #fbbf24;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        display: inline-block;
-    }
-    
-    .badge-lost {
-        background: rgba(239, 68, 68, 0.2);
-        color: #f87171;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        display: inline-block;
-    }
-    
     .fine-amount {
         color: #f97316;
         font-weight: bold;
@@ -223,7 +196,7 @@
                         $hasPaid = $loan->fines->where('status', 'paid')->count() > 0;
                         $hasWaived = $loan->fines->where('status', 'waived')->count() > 0;
                         
-                        // 🔥 DENDA KONDISI BARANG
+                        // DENDA KONDISI BARANG
                         // Kerusakan: dikalikan lama sewa (Rp 50.000 x hari)
                         // Hilang: TETAP (tidak dikalikan) Rp 100.000.000
                         $conditionFineAmount = 0;
@@ -275,20 +248,15 @@
                             }
                         }
                         
-                        // Kondisi badge dan teks
-                        $conditionBadge = '';
+                        // Kondisi teks (tanpa background/badge)
                         $conditionText = '';
                         if($loan->return_condition == 'good' || $loan->return_condition == 'baik') {
-                            $conditionBadge = 'badge-good';
                             $conditionText = '✓ Baik - Tidak ada kerusakan (Denda Rp 0)';
                         } elseif($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak') {
-                            $conditionBadge = 'badge-damaged';
                             $conditionText = '⚠ Rusak - Mengalami kerusakan (Denda Rp 50.000/hari x ' . $days . ' hari = Rp ' . number_format(50000 * $days, 0, ',', '.') . ')';
                         } elseif($loan->return_condition == 'lost') {
-                            $conditionBadge = 'badge-lost';
                             $conditionText = '✗ Hilang - Barang tidak ditemukan (Denda Rp 100.000.000)';
                         } else {
-                            $conditionBadge = '';
                             $conditionText = '-';
                         }
                     @endphp
@@ -315,9 +283,7 @@
                             </div>
                         </td>
                         <td class="p-3">
-                            <span class="{{ $conditionBadge }}" title="{{ $conditionText }}">
-                                {{ $conditionText }}
-                            </span>
+                            {{ $conditionText }}
                         </td>
                         <td class="p-3">
                             @if($totalFine > 0)

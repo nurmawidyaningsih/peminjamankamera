@@ -383,7 +383,7 @@
             <div class="stat-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-[#e0e0e0]">Total Items</p>
+                        <p class="text-xs text-white">Total Items</p>
                         <p class="stat-number">{{ $totalItems ?? 0 }}</p>
                     </div>
                     <div class="stat-icon">
@@ -396,7 +396,7 @@
             <div class="stat-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-[#e0e0e0]">Items Tersedia</p>
+                        <p class="text-xs text-white">Items Tersedia</p>
                         <p class="stat-number">{{ $availableItems ?? 0 }}</p>
                     </div>
                     <div class="stat-icon">
@@ -409,7 +409,7 @@
             <div class="stat-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-[#e0e0e0]">Barang Dipinjam</p>
+                        <p class="text-xs text-white">Barang Dipinjam</p>
                         <p class="stat-number">{{ $borrowItems ?? 0 }}</p>
                     </div>
                     <div class="stat-icon">
@@ -422,7 +422,7 @@
             <div class="stat-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-[#e0e0e0]">Total Users</p>
+                        <p class="text-xs text-white">Total Users</p>
                         <p class="stat-number">{{ $totalUsers ?? 0 }}</p>
                     </div>
                     <div class="stat-icon">
@@ -435,24 +435,24 @@
         </div>
     </div>
 
-<!-- Charts Section -->
-<div class="chart-section">
-    <div class="chart-card">
-        <h2 class="text-lg lg:text-xl font-bold mb-5 text-white">📊 Statistik Peminjaman & Pengembalian</h2>
-        <div class="grid grid-cols-1 gap-6">
-            <div>
-                <h3 class="text-white mb-3 text-sm font-medium">
-                    <span class="w-2 h-2 rounded-full bg-[#b9a6ff] inline-block mr-2"></span>
-                    Peminjaman & Pengembalian (7 Hari Terakhir)
-                </h3>
-                <div class="h-80">
-                    <canvas id="combinedChart"></canvas>
+    <!-- Charts Section -->
+    <div class="chart-section">
+        <div class="chart-card">
+            <h2 class="text-lg lg:text-xl font-bold mb-5 text-white">📊 Statistik Peminjaman & Pengembalian</h2>
+            <div class="grid grid-cols-1 gap-6">
+                <div>
+                    <h3 class="text-white mb-3 text-sm font-medium">
+                        <span class="w-2 h-2 rounded-full bg-[#b9a6ff] inline-block mr-2"></span>
+                        Peminjaman & Pengembalian (7 Hari Terakhir)
+                    </h3>
+                    <div class="h-80">
+                        <canvas id="combinedChart"></canvas>
+                    </div>
                 </div>
             </div>
+            <p class="mt-4 text-xs text-center text-sm text-white">Data statistik 7 hari terakhir</p>
         </div>
-        <p class="mt-4 text-xs text-center text-sm text-white">Data statistik 7 hari terakhir</p>
     </div>
-</div>
 
     <!-- Action Cards -->
     <div class="action-grid">

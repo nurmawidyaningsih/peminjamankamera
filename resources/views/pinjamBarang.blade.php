@@ -130,6 +130,23 @@
         box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
     }
     
+    .btn-delete {
+        background: linear-gradient(90deg, #6b7280 0%, #4b5563 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.75rem;
+    }
+    
+    .btn-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+    }
+    
     .item-photo {
         width: 50px;
         height: 50px;
@@ -198,25 +215,24 @@
         box-shadow: 0 0 0 3px rgba(185, 166, 255, 0.2);
     }
     
-    /* Modal styles */
-    .approve-modal-content, .reject-modal-content, .return-modal-content {
+    .approve-modal-content, .reject-modal-content, .return-modal-content, .delete-modal-content {
         background: #000000 !important;
         border: 1px solid rgba(185, 166, 255, 0.3);
         border-radius: 1rem;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
     
-    .approve-modal-header, .reject-modal-header, .return-modal-header {
+    .approve-modal-header, .reject-modal-header, .return-modal-header, .delete-modal-header {
         background: #000000;
         border-bottom: 1px solid rgba(185, 166, 255, 0.2);
     }
     
-    .approve-modal-footer, .reject-modal-footer, .return-modal-footer {
+    .approve-modal-footer, .reject-modal-footer, .return-modal-footer, .delete-modal-footer {
         background: #000000;
         border-top: 1px solid rgba(185, 166, 255, 0.2);
     }
     
-    .approve-modal-body, .reject-modal-body, .return-modal-body {
+    .approve-modal-body, .reject-modal-body, .return-modal-body, .delete-modal-body {
         background: #000000;
     }
     
@@ -224,7 +240,6 @@
         background: #111111 !important;
     }
     
-    /* Loading overlay */
     .loading-overlay {
         position: fixed;
         top: 0;
@@ -285,7 +300,6 @@
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
     
-    /* Paksa warna putih untuk textarea */
     #rejectReason,
     #rejectReason:focus,
     #rejectReason:active {
@@ -325,10 +339,32 @@
         -webkit-text-fill-color: #9ca3af !important;
     }
     
-    /* Fine amount display */
     .fine-amount {
         font-size: 1.25rem;
         font-weight: bold;
+    }
+    
+    .payment-option {
+        transition: all 0.3s ease;
+    }
+    
+    .payment-option.selected {
+        border-color: #10b981 !important;
+        background: rgba(16, 185, 129, 0.1) !important;
+    }
+    
+    .payment-option.selected-transfer {
+        border-color: #3b82f6 !important;
+        background: rgba(59, 130, 246, 0.1) !important;
+    }
+    
+    .payment-radio {
+        cursor: pointer;
+    }
+    
+    .payment-radio:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
     }
     
     @media (max-width: 768px) {
@@ -338,7 +374,7 @@
             font-size: 0.75rem;
         }
         
-        .btn-approve, .btn-reject, .btn-take, .btn-return {
+        .btn-approve, .btn-reject, .btn-take, .btn-return, .btn-delete {
             padding: 0.25rem 0.5rem;
             font-size: 0.7rem;
         }
@@ -356,7 +392,6 @@
 </style>
 
 <div class="rounded-lg">
-    <!-- Header -->
     <div class="header-gradient flex flex-col items-start justify-start px-4 py-4 mb-4">
         <div class="relative z-10">
             <p class="text-md text-white">Pages / Peminjaman Barang</p>
@@ -364,7 +399,6 @@
         </div>
     </div>
     
-    <!-- Tabel Peminjaman -->
     <div class="flex flex-col justify-around gap-4 mx-4 lg:mx-10 -mt-36 mb-4 p-4 lg:p-8 rounded-xl content-card">
         <div class="flex flex-col gap-2 justify-start items-start p-4 lg:p-0">
             <h1 class="text-xl lg:text-2xl font-bold text-white">📋 List Peminjaman</h1>
@@ -399,7 +433,7 @@
                 </thead>
                 <tbody>
                     @forelse ($loans as $loan)
-                    <tr class="border-b border-[rgba(185,166,255,0.1)] hover:bg-[rgba(185,166,255,0.05)]">
+                    <tr class="border-b border-[rgba(185,166,255,0.1)] hover:bg-[rgba(185,166,255,0.05)]" id="loan-row-{{ $loan->id }}">
                         <td class="p-3">{{ $loop->iteration }}</td>
                         <td class="px-3 py-4">
                             @if($loan->item && $loan->item->foto)
@@ -463,11 +497,11 @@
                             @if($status == 'pending')
                                 @if(in_array(Auth::user()->role, ['admin', 'petugas']))
                                     <div class="action-buttons">
-                                        <button onclick="openApproveModal({{ $loan->id }}, '{{ $loan->item->name }}', '{{ $loan->user->name }}', {{ $loan->quantity }})" 
+                                        <button onclick="openApproveModal({{ $loan->id }}, '{{ addslashes($loan->item->name) }}', '{{ addslashes($loan->user->name) }}', {{ $loan->quantity }})" 
                                                 class="btn-approve">
                                             ✓ Setujui
                                         </button>
-                                        <button onclick="openRejectModal({{ $loan->id }}, '{{ $loan->item->name }}', '{{ $loan->user->name }}')" 
+                                        <button onclick="openRejectModal({{ $loan->id }}, '{{ addslashes($loan->item->name) }}', '{{ addslashes($loan->user->name) }}')" 
                                                 class="btn-reject">
                                             ✗ Tolak
                                         </button>
@@ -480,7 +514,7 @@
                                 @if(Auth::user()->id == $loan->user_id)
                                     <form action="{{ route('loans.take', $loan->id) }}" method="POST" class="inline">
                                         @csrf
-                                        <button type="submit" class="btn-take" onclick="return confirm('Ambil barang {{ $loan->item->name }}?')">
+                                        <button type="submit" class="btn-take" onclick="return confirm('Ambil barang {{ addslashes($loan->item->name) }}?')">
                                             📦 Ambil Barang
                                         </button>
                                     </form>
@@ -490,7 +524,7 @@
                             
                             @elseif($status == 'borrowed')
                                 @if(in_array(Auth::user()->role, ['admin', 'petugas']))
-                                    <button onclick="openReturnModal({{ $loan->id }}, '{{ $loan->item->name }}', {{ $loan->quantity }})" 
+                                    <button onclick="openReturnModal({{ $loan->id }}, '{{ addslashes($loan->item->name) }}', {{ $loan->quantity }})" 
                                             class="btn-return">
                                         🔄 Kembalikan
                                     </button>
@@ -499,10 +533,24 @@
                                 @endif
                             
                             @elseif($status == 'returned')
-                                <span class="text-gray-400 text-sm">✓ Selesai</span>
+                                @if(in_array(Auth::user()->role, ['admin', 'petugas']))
+                                    <button onclick="openDeleteModal({{ $loan->id }}, '{{ addslashes($loan->item->name) }}', '{{ addslashes($loan->user->name) }}')" 
+                                            class="btn-delete">
+                                        🗑️ Hapus
+                                    </button>
+                                @else
+                                    <span class="text-gray-400 text-sm">✓ Selesai</span>
+                                @endif
                             
                             @elseif($status == 'rejected')
-                                <span class="text-red-400 text-sm">✗ Ditolak</span>
+                                @if(in_array(Auth::user()->role, ['admin', 'petugas']))
+                                    <button onclick="openDeleteModal({{ $loan->id }}, '{{ addslashes($loan->item->name) }}', '{{ addslashes($loan->user->name) }}')" 
+                                            class="btn-delete">
+                                        🗑️ Hapus
+                                    </button>
+                                @else
+                                    <span class="text-red-400 text-sm">✗ Ditolak</span>
+                                @endif
                             @endif
                         </td>
                     </tr>
@@ -524,7 +572,6 @@
         </div>
     </div>
     
-    <!-- Form Peminjaman -->
     <div class="flex flex-col justify-around gap-4 mx-4 lg:mx-10 mb-4 p-4 lg:p-8 rounded-xl form-container">
         <div class="flex flex-col gap-6 justify-start items-start p-4 lg:p-0">
             <h1 class="text-xl lg:text-2xl font-bold text-white">➕ Tambah Barang Peminjaman</h1>
@@ -667,11 +714,51 @@
     </div>
 </div>
 
-<!-- Modal Return dengan Denda Otomatis & Scroll -->
+<!-- Modal Delete -->
+<div id="deleteModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+    <div class="relative p-4 w-full max-w-md">
+        <div class="delete-modal-content">
+            <div class="delete-modal-header flex justify-between items-center p-4 border-b">
+                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Hapus Data Peminjaman
+                </h3>
+                <button onclick="closeDeleteModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="delete-modal-body p-6 text-center">
+                <svg class="mx-auto mb-4 text-red-500 w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p class="text-white mb-2" id="deleteMessage"></p>
+                <p class="text-sm text-yellow-400 mt-2 bg-yellow-500/10 p-2 rounded-lg">⚠️ Tindakan ini tidak dapat dibatalkan. Data akan dihapus secara permanen.</p>
+            </div>
+            <div class="delete-modal-footer flex justify-center gap-3 p-4 border-t">
+                <form id="deleteForm" method="POST">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg transition-all shadow-md hover:shadow-lg">
+                        🗑️ Ya, Hapus
+                    </button>
+                </form>
+                <button onclick="closeDeleteModal()" class="border border-gray-500 hover:border-gray-400 text-gray-400 hover:text-white px-5 py-2 rounded-lg transition-all">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Return -->
 <div id="returnModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80">
     <div class="relative p-4 w-full max-w-md">
-        <div class="return-modal-content">
-            <div class="return-modal-header flex justify-between items-center p-4 border-b sticky top-0 bg-black z-10">
+        <div class="return-modal-content rounded-xl">
+            <div class="return-modal-header flex justify-between items-center p-4 border-b border-[rgba(185,166,255,0.2)] sticky top-0 bg-black z-10 rounded-t-xl">
                 <h3 class="text-lg font-semibold text-white flex items-center gap-2">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -686,8 +773,9 @@
             </div>
             <form id="returnForm" method="POST">
                 @csrf
-                <div class="return-modal-body p-6 space-y-4 overflow-y-auto" style="max-height: 60vh; min-height: 300px;">
-                    <!-- Informasi Barang -->
+                <input type="hidden" name="payment_method" id="payment_method_selected" value="cash">
+                
+                <div class="return-modal-body p-6 space-y-4 overflow-y-auto" style="max-height: 60vh; min-height: 500px;">
                     <div class="bg-[#111111] rounded-lg p-4 text-center border border-[rgba(185,166,255,0.2)]">
                         <svg class="w-12 h-12 text-orange-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -696,8 +784,7 @@
                         <p class="text-gray-400 text-xs mt-1">Pastikan kondisi barang sesuai sebelum mengembalikan</p>
                     </div>
                     
-                    <!-- Estimasi Denda Otomatis -->
-                    <div id="estimatedFine" class="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-500/30 rounded-lg p-3">
+                    <div id="estimatedFine" class="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border border-yellow-500/30 rounded-lg p-3 hidden">
                         <div class="flex items-center gap-2">
                             <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -710,12 +797,11 @@
                         </div>
                     </div>
                     
-                    <!-- Kondisi Barang -->
                     <div>
                         <label class="block text-white mb-2 font-medium">Kondisi Barang</label>
                         <select name="return_condition" id="returnCondition" class="w-full p-2.5 rounded-lg bg-white border border-gray-300" style="color: #000000;" required>
                             <option value="good" style="color: #000000; background-color: #ffffff;">✓ Baik - Tidak ada kerusakan (Denda Rp 0)</option>
-                            <option value="damaged" style="color: #000000; background-color: #ffffff;">⚠ Rusak - Mengalami kerusakan (Denda Rp 50.000.000)</option>
+                            <option value="damaged" style="color: #000000; background-color: #ffffff;">⚠ Rusak - Mengalami kerusakan (Denda Rp 50.000/hari)</option>
                             <option value="lost" style="color: #000000; background-color: #ffffff;">✗ Hilang - Barang tidak ditemukan (Denda Rp 100.000.000)</option>
                         </select>
                     </div>
@@ -725,7 +811,103 @@
                         <textarea name="damage_description" id="damageDescription" rows="3" style="color: #ffffff !important; background-color: #111111 !important; border: 1px solid rgba(185,166,255,0.2); width: 100%; padding: 0.625rem; border-radius: 0.5rem; -webkit-text-fill-color: #ffffff !important;" placeholder="Jelaskan secara detail kondisi kerusakan atau kehilangan barang..."></textarea>
                     </div>
                     
-                    <!-- Tabel Informasi Denda -->
+                    <div class="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            </svg>
+                            <p class="text-white font-semibold">💳 METODE PEMBAYARAN</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div id="paymentOptionCash" class="payment-option p-3 rounded-lg bg-[#1a1a2e] border border-[rgba(185,166,255,0.2)] cursor-pointer transition-all hover:border-green-500" onclick="selectPaymentMethod('cash')">
+                                <div class="flex items-center justify-center gap-2">
+                                    <input type="radio" name="payment_method_radio" id="payment_cash" value="cash" class="w-4 h-4 text-green-500 payment-radio" checked>
+                                    <label for="payment_cash" class="text-white text-sm cursor-pointer">💵 CASH (Tunai)</label>
+                                </div>
+                                <p class="text-gray-400 text-xs text-center mt-1">Bayar langsung secara tunai</p>
+                            </div>
+                            
+                            <div id="paymentOptionTransfer" class="payment-option p-3 rounded-lg bg-[#1a1a2e] border border-[rgba(185,166,255,0.2)] cursor-pointer transition-all hover:border-blue-500" onclick="selectPaymentMethod('transfer')">
+                                <div class="flex items-center justify-center gap-2">
+                                    <input type="radio" name="payment_method_radio" id="payment_transfer" value="transfer" class="w-4 h-4 text-blue-500 payment-radio">
+                                    <label for="payment_transfer" class="text-white text-sm cursor-pointer">🏦 TRANSFER BANK (TF)</label>
+                                </div>
+                                <p class="text-gray-400 text-xs text-center mt-1">Bayar via transfer bank</p>
+                            </div>
+                        </div>
+                        
+                        <div id="transferInfo" class="hidden mt-3 p-4 bg-white rounded-lg text-center">
+                            <div class="flex justify-center mb-3">
+                                <div class="bg-black p-3 rounded-lg">
+                                    <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                                        <rect width="120" height="120" fill="white"/>
+                                        <rect x="10" y="10" width="22" height="22" fill="black"/>
+                                        <rect x="12" y="12" width="18" height="18" fill="white"/>
+                                        <rect x="14" y="14" width="14" height="14" fill="black"/>
+                                        <rect x="88" y="10" width="22" height="22" fill="black"/>
+                                        <rect x="90" y="12" width="18" height="18" fill="white"/>
+                                        <rect x="92" y="14" width="14" height="14" fill="black"/>
+                                        <rect x="10" y="88" width="22" height="22" fill="black"/>
+                                        <rect x="12" y="90" width="18" height="18" fill="white"/>
+                                        <rect x="14" y="92" width="14" height="14" fill="black"/>
+                                        <rect x="38" y="10" width="5" height="5" fill="black"/>
+                                        <rect x="48" y="10" width="5" height="5" fill="black"/>
+                                        <rect x="58" y="10" width="5" height="5" fill="black"/>
+                                        <rect x="68" y="10" width="5" height="5" fill="black"/>
+                                        <rect x="78" y="10" width="5" height="5" fill="black"/>
+                                        <rect x="38" y="20" width="5" height="5" fill="black"/>
+                                        <rect x="58" y="20" width="5" height="5" fill="black"/>
+                                        <rect x="78" y="20" width="5" height="5" fill="black"/>
+                                        <rect x="10" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="25" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="38" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="52" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="68" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="82" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="95" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="105" y="38" width="5" height="5" fill="black"/>
+                                        <rect x="10" y="52" width="5" height="5" fill="black"/>
+                                        <rect x="25" y="52" width="5" height="5" fill="black"/>
+                                        <rect x="48" y="52" width="5" height="5" fill="black"/>
+                                        <rect x="62" y="52" width="5" height="5" fill="black"/>
+                                        <rect x="82" y="52" width="5" height="5" fill="black"/>
+                                        <rect x="95" y="52" width="5" height="5" fill="black"/>
+                                        <rect x="105" y="52" width="5" height="5" fill="black"/>
+                                        <rect x="10" y="68" width="5" height="5" fill="black"/>
+                                        <rect x="30" y="68" width="5" height="5" fill="black"/>
+                                        <rect x="48" y="68" width="5" height="5" fill="black"/>
+                                        <rect x="68" y="68" width="5" height="5" fill="black"/>
+                                        <rect x="85" y="68" width="5" height="5" fill="black"/>
+                                        <rect x="105" y="68" width="5" height="5" fill="black"/>
+                                        <rect x="38" y="82" width="5" height="5" fill="black"/>
+                                        <rect x="52" y="82" width="5" height="5" fill="black"/>
+                                        <rect x="68" y="82" width="5" height="5" fill="black"/>
+                                        <rect x="82" y="82" width="5" height="5" fill="black"/>
+                                        <rect x="105" y="82" width="5" height="5" fill="black"/>
+                                        <rect x="38" y="95" width="5" height="5" fill="black"/>
+                                        <rect x="58" y="95" width="5" height="5" fill="black"/>
+                                        <rect x="78" y="95" width="5" height="5" fill="black"/>
+                                        <rect x="95" y="95" width="5" height="5" fill="black"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <p class="text-gray-800 font-bold text-sm">QRIS / Scan to Pay</p>
+                            <p class="text-gray-500 text-xs mt-1">Bayar via Transfer Bank</p>
+                            <div class="mt-3 p-3 bg-gray-100 rounded-lg">
+                                <p class="text-gray-600 text-xs">🏦 BCA / Mandiri / BRI</p>
+                                <p class="text-gray-800 text-sm font-bold mt-1">1234-5678-9012-3456</p>
+                                <p class="text-gray-500 text-xs">a.n. LENTORA OFFICIAL</p>
+                            </div>
+                            <button type="button" onclick="copyBankAccount()" class="mt-3 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 w-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                📋 Salin No. Rekening
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-4 border border-gray-700 shadow-lg">
                         <div class="flex items-center gap-2 mb-4 pb-2 border-b border-gray-700">
                             <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -735,7 +917,6 @@
                         </div>
                         
                         <div class="space-y-3">
-                            <!-- Denda Baik -->
                             <div class="flex justify-between items-center py-2 px-2 rounded-lg bg-gray-800/50">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
@@ -751,7 +932,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Denda Rusak -->
                             <div class="flex justify-between items-center py-2 px-2 rounded-lg bg-gray-800/50">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
@@ -759,15 +939,15 @@
                                     </div>
                                     <div>
                                         <p class="text-white font-medium text-sm">Kondisi Rusak</p>
-                                        <p class="text-gray-400 text-xs">Mengalami kerusakan</p>
+                                        <p class="text-gray-400 text-xs">Mengalami kerusakan (per hari)</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <p class="text-orange-400 font-bold">Rp 50.000.000</p>
+                                    <p class="text-orange-400 font-bold">Rp 50.000</p>
+                                    <p class="text-gray-500 text-xs">/ hari</p>
                                 </div>
                             </div>
                             
-                            <!-- Denda Hilang -->
                             <div class="flex justify-between items-center py-2 px-2 rounded-lg bg-gray-800/50">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -784,7 +964,6 @@
                             </div>
                         </div>
                         
-                        <!-- Denda Keterlambatan -->
                         <div class="mt-3 pt-3 border-t border-gray-700">
                             <div class="flex justify-between items-center py-2 px-2 rounded-lg bg-gray-800/50">
                                 <div class="flex items-center gap-3">
@@ -804,7 +983,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="return-modal-footer flex justify-end gap-3 p-4 border-t sticky bottom-0 bg-black z-10">
+                <div class="return-modal-footer flex justify-end gap-3 p-4 border-t border-[rgba(185,166,255,0.2)] sticky bottom-0 bg-black z-10 rounded-b-xl">
                     <button type="button" onclick="closeReturnModal()" class="px-4 py-2 rounded-lg border border-gray-500 text-gray-400 hover:text-white hover:border-white transition-colors">
                         Batal
                     </button>
@@ -819,16 +998,13 @@
         </div>
     </div>
 </div>
-</div>
 
-<!-- Audio Notification -->
 <audio id="successSound" preload="auto">
     <source src="{{ asset('sound/sound1.wav') }}" type="audio/wav">
 </audio>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- Alert Messages -->
 @if (session('success'))
 <div id="alert-success" class="fixed top-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg bg-green-500/20 border border-green-500/30">
     <svg class="w-5 h-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -943,17 +1119,162 @@
         if (reason) reason.value = '';
     }
     
-    // Fungsi untuk menghitung denda berdasarkan kondisi (NOMINAL TETAP)
+    function openDeleteModal(loanId, itemName, userName) {
+        document.getElementById('deleteMessage').innerHTML = 'Hapus data peminjaman <strong class="text-red-400">' + itemName + '</strong> oleh <strong>' + userName + '</strong>?';
+        document.getElementById('deleteForm').action = '/loans/' + loanId;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+    
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+    }
+    
+    document.getElementById('deleteForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        Swal.fire({
+            title: 'Konfirmasi Hapus',
+            text: 'Apakah Anda yakin ingin menghapus data ini?',
+            icon: 'warning',
+            background: '#1e1e2f',
+            color: '#fff',
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Hapus!',
+            cancelButtonText: 'Batal',
+            showCancelButton: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading();
+                
+                fetch(this.action, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    closeDeleteModal();
+                    
+                    if (data.success) {
+                        playSuccessSound();
+                        showNotification(data.message, 'success');
+                        const rowId = this.action.split('/').pop();
+                        const row = document.getElementById('loan-row-' + rowId);
+                        if (row) row.remove();
+                        
+                        Swal.fire({
+                            title: 'Berhasil!',
+                            text: data.message,
+                            icon: 'success',
+                            background: '#1e1e2f',
+                            color: '#fff',
+                            confirmButtonColor: '#b9a6ff',
+                            timer: 2000
+                        }).then(() => {
+                            if (document.querySelectorAll('tbody tr').length === 0) {
+                                window.location.reload();
+                            }
+                        });
+                    } else {
+                        showNotification(data.message, 'error');
+                        Swal.fire({
+                            title: 'Gagal!',
+                            text: data.message,
+                            icon: 'error',
+                            background: '#1e1e2f',
+                            color: '#fff',
+                            confirmButtonColor: '#b9a6ff'
+                        });
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    console.error('Error:', error);
+                    showNotification('Terjadi kesalahan jaringan', 'error');
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Terjadi kesalahan saat menghubungi server.',
+                        icon: 'error',
+                        background: '#1e1e2f',
+                        color: '#fff',
+                        confirmButtonColor: '#b9a6ff'
+                    });
+                });
+            }
+        });
+    });
+    
     function calculateFineByCondition(condition) {
         switch(condition) {
-            case 'good':
-                return 0;
-            case 'damaged':
-                return 50000000; // Rp 50.000.000
-            case 'lost':
-                return 100000000; // Rp 100.000.000
-            default:
-                return 0;
+            case 'good': return 0;
+            case 'damaged': return 50000;
+            case 'lost': return 100000000;
+            default: return 0;
+        }
+    }
+    
+    function copyBankAccount() {
+        const bankNumber = '1234-5678-9012-3456';
+        navigator.clipboard.writeText(bankNumber).then(function() {
+            showNotification('Nomor rekening berhasil disalin!', 'success');
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Nomor rekening telah disalin ke clipboard',
+                icon: 'success',
+                background: '#1e1e2f',
+                color: '#fff',
+                confirmButtonColor: '#b9a6ff',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        });
+    }
+    
+    function selectPaymentMethod(method) {
+        const cashRadio = document.getElementById('payment_cash');
+        const transferRadio = document.getElementById('payment_transfer');
+        const paymentHidden = document.getElementById('payment_method_selected');
+        const transferInfo = document.getElementById('transferInfo');
+        const paymentOptionCash = document.getElementById('paymentOptionCash');
+        const paymentOptionTransfer = document.getElementById('paymentOptionTransfer');
+        
+        if (method === 'cash') {
+            if (cashRadio) {
+                cashRadio.checked = true;
+                cashRadio.dispatchEvent(new Event('change'));
+            }
+            if (transferRadio) transferRadio.checked = false;
+            if (paymentHidden) paymentHidden.value = 'cash';
+            if (transferInfo) transferInfo.classList.add('hidden');
+            if (paymentOptionCash) {
+                paymentOptionCash.style.borderColor = '#10b981';
+                paymentOptionCash.style.background = 'rgba(16, 185, 129, 0.1)';
+            }
+            if (paymentOptionTransfer) {
+                paymentOptionTransfer.style.borderColor = 'rgba(185,166,255,0.2)';
+                paymentOptionTransfer.style.background = '#1a1a2e';
+            }
+        } else if (method === 'transfer') {
+            if (transferRadio) {
+                transferRadio.checked = true;
+                transferRadio.dispatchEvent(new Event('change'));
+            }
+            if (cashRadio) cashRadio.checked = false;
+            if (paymentHidden) paymentHidden.value = 'transfer';
+            if (transferInfo) transferInfo.classList.remove('hidden');
+            if (paymentOptionTransfer) {
+                paymentOptionTransfer.style.borderColor = '#3b82f6';
+                paymentOptionTransfer.style.background = 'rgba(59, 130, 246, 0.1)';
+            }
+            if (paymentOptionCash) {
+                paymentOptionCash.style.borderColor = 'rgba(185,166,255,0.2)';
+                paymentOptionCash.style.background = '#1a1a2e';
+            }
         }
     }
     
@@ -961,11 +1282,15 @@
         currentQuantity = amount;
         document.getElementById('returnMessage').innerHTML = 'Kembalikan barang <strong>' + itemName + '</strong> (' + amount + ' unit)?';
         document.getElementById('returnForm').action = '/loans/' + loanId + '/return';
-        document.getElementById('returnModal').classList.remove('hidden');
+        
+        selectPaymentMethod('cash');
+        
         document.getElementById('returnCondition').value = 'good';
         document.getElementById('damageFields').style.display = 'none';
         document.getElementById('damageDescription').value = '';
         document.getElementById('estimatedFine').classList.add('hidden');
+        
+        document.getElementById('returnModal').classList.remove('hidden');
     }
     
     function closeReturnModal() {
@@ -1041,7 +1366,51 @@
                     estimatedFine.classList.remove('hidden');
                     var fineAmount = calculateFineByCondition(this.value);
                     var formattedFine = 'Rp ' + fineAmount.toLocaleString('id-ID');
+                    if (this.value === 'damaged') {
+                        formattedFine = 'Rp 50.000 / hari';
+                    }
                     document.getElementById('estimatedFineAmount').innerHTML = formattedFine;
+                }
+            });
+        }
+        
+        const cashRadio = document.getElementById('payment_cash');
+        const transferRadio = document.getElementById('payment_transfer');
+        const paymentHidden = document.getElementById('payment_method_selected');
+        const transferInfo = document.getElementById('transferInfo');
+        const paymentOptionCash = document.getElementById('paymentOptionCash');
+        const paymentOptionTransfer = document.getElementById('paymentOptionTransfer');
+        
+        if (cashRadio) {
+            cashRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    paymentHidden.value = 'cash';
+                    if (transferInfo) transferInfo.classList.add('hidden');
+                    if (paymentOptionCash) {
+                        paymentOptionCash.style.borderColor = '#10b981';
+                        paymentOptionCash.style.background = 'rgba(16, 185, 129, 0.1)';
+                    }
+                    if (paymentOptionTransfer) {
+                        paymentOptionTransfer.style.borderColor = 'rgba(185,166,255,0.2)';
+                        paymentOptionTransfer.style.background = '#1a1a2e';
+                    }
+                }
+            });
+        }
+        
+        if (transferRadio) {
+            transferRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    paymentHidden.value = 'transfer';
+                    if (transferInfo) transferInfo.classList.remove('hidden');
+                    if (paymentOptionTransfer) {
+                        paymentOptionTransfer.style.borderColor = '#3b82f6';
+                        paymentOptionTransfer.style.background = 'rgba(59, 130, 246, 0.1)';
+                    }
+                    if (paymentOptionCash) {
+                        paymentOptionCash.style.borderColor = 'rgba(185,166,255,0.2)';
+                        paymentOptionCash.style.background = '#1a1a2e';
+                    }
                 }
             });
         }

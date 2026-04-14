@@ -18,6 +18,7 @@
         .total-row { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid #333; font-weight: bold; font-size: 14px; }
         .fine-row { color: #f97316; font-weight: bold; }
         .rental-cost { background: #f0fdf4; padding: 8px; margin: 10px 0; border-radius: 5px; }
+        .payment-method { background: #f0f9ff; padding: 8px; margin: 10px 0; border-radius: 5px; border: 1px solid #bae6fd; }
         .receipt-footer { text-align: center; border-top: 2px dashed #333; padding-top: 10px; margin-top: 15px; font-size: 10px; color: #666; }
         .signature { margin-top: 20px; display: flex; justify-content: space-between; font-size: 10px; }
         .btn-print { background: #4ade80; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-top: 20px; width: 100%; }
@@ -31,6 +32,16 @@
         .text-green { color: #16a34a; }
         .text-orange { color: #ea580c; }
         .text-red { color: #dc2626; }
+        .text-blue { color: #2563eb; }
+        .qr-simple { background: white; border-radius: 12px; padding: 8px; display: inline-block; border: 1px solid #e2e8f0; }
+        .bank-info { background: #f8fafc; border-radius: 8px; padding: 8px; margin-top: 8px; }
+        .payment-option { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #e2e8f0; }
+        .payment-option:last-child { border-bottom: none; }
+        .payment-icon { font-size: 18px; width: 32px; }
+        .payment-detail { flex: 1; }
+        .payment-title { font-size: 11px; font-weight: bold; }
+        .payment-desc { font-size: 9px; color: #666; }
+        .payment-check { background: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 9px; }
         @media print { body { background: white; padding: 0; } .btn-print { display: none; } .receipt { box-shadow: none; padding: 0; } }
     </style>
 </head>
@@ -81,13 +92,10 @@
                 // Hitung total denda dari fines
                 $totalFineFromFines = $loan->fines->sum('amount');
                 
-                // 🔥 DENDA KONDISI BARANG
-                // Kerusakan: dikalikan lama sewa (Rp 50.000 x hari)
-                // Hilang: TETAP (tidak dikalikan) Rp 100.000.000
+                // DENDA KONDISI BARANG
                 $conditionFineAmount = 0;
                 $hasConditionFineInFines = false;
                 
-                // Cek apakah sudah ada denda untuk kondisi ini di tabel fines
                 foreach($loan->fines as $fine) {
                     if($fine->fine_type == 'damage') {
                         $hasConditionFineInFines = true;
@@ -98,16 +106,14 @@
                 }
                 
                 if(($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak') && !$hasConditionFineInFines) {
-                    $conditionFineAmount = 50000 * $days; // Rp 50.000 x hari (DIKALIKAN)
+                    $conditionFineAmount = 50000 * $days;
                 } elseif(($loan->return_condition == 'lost') && !$hasConditionFineInFines) {
-                    $conditionFineAmount = 100000000; // Rp 100.000.000 (TETAP, TIDAK DIKALIKAN)
+                    $conditionFineAmount = 100000000;
                 }
                 
-                // TOTAL DENDA AKHIR
                 $totalDenda = $totalFineFromFines + $conditionFineAmount;
                 $totalBayar = $total_sewa + $totalDenda;
                 
-                // Tentukan status denda secara keseluruhan
                 $hasUnpaidFines = false;
                 foreach($loan->fines as $fine) {
                     if($fine->status == 'pending') {
@@ -116,6 +122,22 @@
                 }
                 if($conditionFineAmount > 0) {
                     $hasUnpaidFines = true;
+                }
+                
+                // 🔥 AMBIL METODE PEMBAYARAN - PRIORITAS: DATABASE -> GET -> SESSION -> DEFAULT
+                $paymentMethod = 'cash';
+                
+                // Cek dari database loan
+                if(isset($loan->payment_method) && !empty($loan->payment_method)) {
+                    $paymentMethod = $loan->payment_method;
+                }
+                // Cek dari request GET
+                elseif(isset($_GET['payment_method']) && !empty($_GET['payment_method'])) {
+                    $paymentMethod = $_GET['payment_method'];
+                }
+                // Cek dari session
+                elseif(session()->has('payment_method')) {
+                    $paymentMethod = session('payment_method');
                 }
             @endphp
             
@@ -148,7 +170,7 @@
             </div>
             <div class="info-row">
                 <span class="info-label">Jumlah:</span>
-                <span>{{ $loan->amount }} unit</span>
+                <span>{{ $loan->amount ?? $loan->quantity ?? 1 }} unit</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Tanggal Pinjam:</span>
@@ -178,11 +200,11 @@
                 <span class="info-label">Kondisi Barang:</span>
                 <span>
                     @if($loan->return_condition == 'good' || $loan->return_condition == 'baik')
-                        <span class="status-badge status-good">✓ Baik</span>
+                        <span class="status-badge status-good">✓ Baik - Tidak ada kerusakan (Denda Rp 0)</span>
                     @elseif($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak')
-                        <span class="status-badge status-damaged">⚠ Rusak</span>
+                        <span class="status-badge status-damaged">⚠ Rusak - Mengalami kerusakan</span>
                     @elseif($loan->return_condition == 'lost')
-                        <span class="status-badge status-lost">✗ Hilang</span>
+                        <span class="status-badge status-lost">✗ Hilang - Barang tidak ditemukan</span>
                     @else
                         <span>-</span>
                     @endif
@@ -235,7 +257,6 @@
             </div>
             @endforeach
             
-            <!-- TAMPILKAN DENDA KONDISI BARANG JIKA BELUM ADA DI FINES -->
             @if($conditionFineAmount > 0)
             <div class="info-row">
                 <span class="info-label">
@@ -253,6 +274,116 @@
             </div>
             @endif
             @endif
+            
+            <div class="divider"></div>
+            
+            <!-- 🔥 METODE PEMBAYARAN: CASH ATAU TRANSFER (TF) - TAMPILKAN KEDUA PILIHAN -->
+            <div class="payment-method">
+                <div class="info-row" style="margin-bottom: 12px;">
+                    <span class="info-label">💳 METODE PEMBAYARAN:</span>
+                    <span>
+                        @if($paymentMethod == 'cash')
+                            💵 CASH (Tunai)
+                        @elseif($paymentMethod == 'transfer')
+                            🏦 TRANSFER BANK (TF)
+                        @else
+                            💵 CASH (Tunai)
+                        @endif
+                    </span>
+                </div>
+                
+                <div class="divider" style="margin: 8px 0;"></div>
+                
+                <!-- Pilihan Metode Pembayaran (CASH) -->
+                <div class="payment-option">
+                    <div class="payment-icon">💵</div>
+                    <div class="payment-detail">
+                        <div class="payment-title">CASH (Tunai)</div>
+                        <div class="payment-desc">Bayar langsung secara tunai</div>
+                    </div>
+                    @if($paymentMethod == 'cash')
+                        <div class="payment-check">✓ Dipilih</div>
+                    @endif
+                </div>
+                
+                <!-- Pilihan Metode Pembayaran (TRANSFER) -->
+                <div class="payment-option">
+                    <div class="payment-icon">🏦</div>
+                    <div class="payment-detail">
+                        <div class="payment-title">TRANSFER BANK (TF)</div>
+                        <div class="payment-desc">Bayar via transfer bank</div>
+                    </div>
+                    @if($paymentMethod == 'transfer')
+                        <div class="payment-check">✓ Dipilih</div>
+                    @endif
+                </div>
+                
+                <!-- Jika metode pembayaran adalah TRANSFER, tampilkan QR Code dan Info Bank -->
+                @if($paymentMethod == 'transfer')
+                <div class="divider" style="margin: 8px 0;"></div>
+                <div class="text-center">
+                    <div class="qr-simple">
+                        <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="120" height="120" fill="white"/>
+                            <rect x="10" y="10" width="22" height="22" fill="black"/>
+                            <rect x="12" y="12" width="18" height="18" fill="white"/>
+                            <rect x="14" y="14" width="14" height="14" fill="black"/>
+                            <rect x="88" y="10" width="22" height="22" fill="black"/>
+                            <rect x="90" y="12" width="18" height="18" fill="white"/>
+                            <rect x="92" y="14" width="14" height="14" fill="black"/>
+                            <rect x="10" y="88" width="22" height="22" fill="black"/>
+                            <rect x="12" y="90" width="18" height="18" fill="white"/>
+                            <rect x="14" y="92" width="14" height="14" fill="black"/>
+                            <rect x="38" y="10" width="5" height="5" fill="black"/>
+                            <rect x="48" y="10" width="5" height="5" fill="black"/>
+                            <rect x="58" y="10" width="5" height="5" fill="black"/>
+                            <rect x="68" y="10" width="5" height="5" fill="black"/>
+                            <rect x="78" y="10" width="5" height="5" fill="black"/>
+                            <rect x="38" y="20" width="5" height="5" fill="black"/>
+                            <rect x="58" y="20" width="5" height="5" fill="black"/>
+                            <rect x="78" y="20" width="5" height="5" fill="black"/>
+                            <rect x="10" y="38" width="5" height="5" fill="black"/>
+                            <rect x="25" y="38" width="5" height="5" fill="black"/>
+                            <rect x="38" y="38" width="5" height="5" fill="black"/>
+                            <rect x="52" y="38" width="5" height="5" fill="black"/>
+                            <rect x="68" y="38" width="5" height="5" fill="black"/>
+                            <rect x="82" y="38" width="5" height="5" fill="black"/>
+                            <rect x="95" y="38" width="5" height="5" fill="black"/>
+                            <rect x="105" y="38" width="5" height="5" fill="black"/>
+                            <rect x="10" y="52" width="5" height="5" fill="black"/>
+                            <rect x="25" y="52" width="5" height="5" fill="black"/>
+                            <rect x="48" y="52" width="5" height="5" fill="black"/>
+                            <rect x="62" y="52" width="5" height="5" fill="black"/>
+                            <rect x="82" y="52" width="5" height="5" fill="black"/>
+                            <rect x="95" y="52" width="5" height="5" fill="black"/>
+                            <rect x="105" y="52" width="5" height="5" fill="black"/>
+                            <rect x="10" y="68" width="5" height="5" fill="black"/>
+                            <rect x="30" y="68" width="5" height="5" fill="black"/>
+                            <rect x="48" y="68" width="5" height="5" fill="black"/>
+                            <rect x="68" y="68" width="5" height="5" fill="black"/>
+                            <rect x="85" y="68" width="5" height="5" fill="black"/>
+                            <rect x="105" y="68" width="5" height="5" fill="black"/>
+                            <rect x="38" y="82" width="5" height="5" fill="black"/>
+                            <rect x="52" y="82" width="5" height="5" fill="black"/>
+                            <rect x="68" y="82" width="5" height="5" fill="black"/>
+                            <rect x="82" y="82" width="5" height="5" fill="black"/>
+                            <rect x="105" y="82" width="5" height="5" fill="black"/>
+                            <rect x="38" y="95" width="5" height="5" fill="black"/>
+                            <rect x="58" y="95" width="5" height="5" fill="black"/>
+                            <rect x="78" y="95" width="5" height="5" fill="black"/>
+                            <rect x="95" y="95" width="5" height="5" fill="black"/>
+                        </svg>
+                    </div>
+                    <p class="text-blue" style="font-size: 10px; margin-top: 8px;">Scan QRIS untuk pembayaran</p>
+                    
+                    <div class="bank-info">
+                        <p style="font-size: 9px; color: #475569;">🏦 Bank BCA / Mandiri / BRI</p>
+                        <p style="font-size: 11px; font-weight: bold; letter-spacing: 1px; margin-top: 4px;">1234-5678-9012-3456</p>
+                        <p style="font-size: 9px; color: #475569; margin-top: 2px;">a.n. LENTORA OFFICIAL</p>
+                    </div>
+                </div>
+                @endif
+            </div>
             
             <div class="divider"></div>
             
@@ -284,6 +415,13 @@
                 <span class="text-orange">Terlambat {{ $lateDays }} hari</span>
             </div>
             @endif
+            
+            @if($paymentMethod == 'transfer' && $totalBayar > 0)
+            <div class="info-row" style="margin-top: 8px;">
+                <span class="info-label text-blue">Status Pembayaran:</span>
+                <span class="text-orange">⏳ Menunggu Konfirmasi</span>
+            </div>
+            @endif
         </div>
         
         <div class="receipt-footer">
@@ -292,7 +430,7 @@
                 @if($loan->return_condition == 'good' || $loan->return_condition == 'baik') baik
                 @elseif($loan->return_condition == 'damaged' || $loan->return_condition == 'rusak') rusak
                 @elseif($loan->return_condition == 'lost') hilang
-                @endif
+                @else - @endif
             </p>
             <p>*** Simpan struk ini sebagai bukti pengembalian ***</p>
         </div>

@@ -59,10 +59,12 @@ Route::middleware(['auth', RoleMiddleware::class . ':admin,petugas'])->group(fun
     // Return barang
     Route::post('/loans/{loan}/return', [LoanController::class, 'returnLoan'])->name('loans.return');
     
-    // Logs - TAMBAHKAN ROUTE DELETE DI SINI
+    // DELETE LOAN - HAPUS DATA PEMINJAMAN (TAMBAHKAN INI)
+    Route::delete('/loans/{loan}', [LoanController::class, 'destroy'])->name('loans.destroy');
+    
+    // Logs
     Route::get('/logs', [LogController::class, 'index'])->name('logs');
-    Route::delete('/logs/{log}', [LogController::class, 'destroy'])->name('logs.delete'); // ← TAMBAHKAN INI
-    // Route::put('/logs/{log}', [LogController::class, 'update'])->name('logs.update'); // Jika perlu update
+    Route::delete('/logs/{log}', [LogController::class, 'destroy'])->name('logs.delete');
 });
 
 // Admin only routes

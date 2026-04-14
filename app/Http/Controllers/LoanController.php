@@ -27,15 +27,15 @@ class LoanController extends Controller
     /**
      * Menampilkan riwayat transaksi pengembalian
      */
-public function transactions()
-{
-    $loans = Loan::with(['user', 'item', 'fines'])
-        ->whereIn('status', ['returned', 'borrowed'])
-        ->orderBy('created_at', 'desc')
-        ->paginate(15);
-    
-    return view('transactions', compact('loans'));
-}
+    public function transactions()
+    {
+        $loans = Loan::with(['user', 'item', 'fines'])
+            ->whereIn('status', ['returned', 'borrowed'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+        
+        return view('transactions', compact('loans'));
+    }
 
     /**
      * Proses peminjaman barang
@@ -206,6 +206,7 @@ public function transactions()
             $data = [
                 'status' => 'returned',
                 'returned_at' => now(),
+                'payment_method' => $request->payment_method,
             ];
             
             if ($request->has('return_condition')) {
@@ -229,6 +230,68 @@ public function transactions()
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hapus data peminjaman
+     * Hanya dapat menghapus data dengan status 'returned' atau 'rejected'
+     */
+    public function destroy($id)
+    {
+        try {
+            $loan = Loan::findOrFail($id);
+            
+            // Cek otorisasi - hanya admin dan petugas yang bisa menghapus
+            if (!in_array(Auth::user()->role, ['admin', 'petugas'])) {
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Anda tidak memiliki izin untuk menghapus data!'
+                    ], 403);
+                }
+                return redirect()->back()->with('error', 'Anda tidak memiliki izin untuk menghapus data!');
+            }
+            
+            // Hanya izinkan hapus jika status returned atau rejected
+            if (!in_array($loan->status, ['returned', 'rejected'])) {
+                $message = 'Hanya peminjaman dengan status "Dikembalikan" atau "Ditolak" yang dapat dihapus!';
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $message
+                    ], 400);
+                }
+                return redirect()->back()->with('error', $message);
+            }
+            
+            // Hapus data fine terkait jika ada
+            if ($loan->fines && $loan->fines->count() > 0) {
+                foreach ($loan->fines as $fine) {
+                    $fine->delete();
+                }
+            }
+            
+            // Hapus data loan
+            $loan->delete();
+            
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Data peminjaman berhasil dihapus!'
+                ]);
+            }
+            
+            return redirect()->back()->with('success', 'Data peminjaman berhasil dihapus!');
+            
+        } catch (\Exception $e) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal menghapus data: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'Gagal menghapus data peminjaman: ' . $e->getMessage());
         }
     }
 

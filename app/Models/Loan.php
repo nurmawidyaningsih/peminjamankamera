@@ -21,12 +21,14 @@ class Loan extends Model
     const CONDITION_DAMAGED = 'damaged';
     const CONDITION_LOST = 'lost';
 
-    protected $fillable = [
-        'user_id', 'item_id', 'description', 'borrow_date',
-        'return_date', 'status', 'amount', 'approved_by', 'approved_at',
-        'returned_by', 'returned_at', 'rejected_by', 'rejected_at', 'rejection_reason',
-        'return_condition', 'damage_description', 'fine_amount', 'transaction_code'
-    ];
+protected $fillable = [
+    'user_id', 'item_id', 'description', 'borrow_date',
+    'return_date', 'status', 'amount', 'approved_by', 'approved_at',
+    'returned_by', 'returned_at', 'rejected_by', 'rejected_at', 'rejection_reason',
+    'return_condition', 'damage_description', 'fine_amount', 'transaction_code',
+    'payment_method',  // ← TAMBAHKAN INI!
+    'quantity'
+];
 
     protected $casts = [
         'borrow_date' => 'date',
